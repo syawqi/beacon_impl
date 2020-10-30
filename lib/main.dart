@@ -3,21 +3,109 @@ import 'dart:async';
 import 'package:beacon_broadcast/beacon_broadcast.dart';
 import 'package:flutter/material.dart';
 
-void main() => runApp(MainApp());
+void main() => runApp(MyApp());
 
-
-class MainApp extends StatefulWidget {
-  MainApp({Key key}) : super(key: key);
-
+class MyApp extends StatefulWidget {
   @override
-  _MainAppState createState() => _MainAppState();
+  _MyAppState createState() => _MyAppState();
 }
 
-class _MainAppState extends State<MainApp> {
+class _MyAppState extends State<MyApp> {
+  static const UUID = '39ED98FF-2900-441A-802F-9C398FC199D2';
+  static const MAJOR_ID = 1;
+  static const MINOR_ID = 100;
+  static const TRANSMISSION_POWER = -59;
+  static const IDENTIFIER = 'com.example.myDeviceRegion';
+
+  BeaconBroadcast beaconBroadcast = BeaconBroadcast();
+
+  BeaconStatus _isTransmissionSupported;
+  bool _isAdvertising = false;
+  StreamSubscription<bool> _isAdvertisingSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    beaconBroadcast.checkTransmissionSupported().then((isTransmissionSupported) {
+      setState(() {
+        _isTransmissionSupported = isTransmissionSupported;
+      });
+    });
+
+    _isAdvertisingSubscription =
+        beaconBroadcast.getAdvertisingStateChange().listen((isAdvertising) {
+          setState(() {
+            _isAdvertising = isAdvertising;
+          });
+        });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-       child: child,
+    return MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(
+          title: const Text('Beacon Broadcast'),
+        ),
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text('Is transmission supported?',
+                    style: Theme.of(context).textTheme.headline),
+                Text('$_isTransmissionSupported',
+                    style: Theme.of(context).textTheme.subhead),
+                Container(height: 16.0),
+                Text('Is beacon started?', style: Theme.of(context).textTheme.headline),
+                Text('$_isAdvertising', style: Theme.of(context).textTheme.subhead),
+                Container(height: 16.0),
+                Center(
+                  child: RaisedButton(
+                    onPressed: () {
+                      beaconBroadcast
+                          .setUUID(UUID)
+                          .setMajorId(MAJOR_ID)
+                          .setMinorId(MINOR_ID)
+                          .setTransmissionPower(-59)
+                          .setIdentifier(IDENTIFIER)
+                          .setLayout('m:2-3=0215,i:4-19,i:20-21,i:22-23,p:24-24')
+                          .setManufacturerId(0x004c)
+                          .start();
+                    },
+                    child: Text('START'),
+                  ),
+                ),
+                Center(
+                  child: RaisedButton(
+                    onPressed: () {
+                      beaconBroadcast.stop();
+                    },
+                    child: Text('STOP'),
+                  ),
+                ),
+                Text('Beacon Data', style: Theme.of(context).textTheme.headline),
+                Text('UUID: $UUID'),
+                Text('Major id: $MAJOR_ID'),
+                Text('Minor id: $MINOR_ID'),
+                Text('Tx Power: $TRANSMISSION_POWER'),
+                Text('Identifier: $IDENTIFIER')
+              ],
+            ),
+          ),
+        ),
+      ),
     );
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    if (_isAdvertisingSubscription != null) {
+      _isAdvertisingSubscription.cancel();
+    }
   }
 }
